@@ -1,0 +1,20 @@
+FROM composer:2.9.2 AS vendor
+WORKDIR /app
+COPY . .
+RUN composer install --no-dev --no-interaction --no-progress --prefer-dist --classmap-authoritative --no-scripts
+
+FROM php:8.4.27-fpm-bookworm
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends libpq-dev \
+    && docker-php-ext-install -j"$(nproc)" pdo_pgsql opcache \
+    && apt-mark manual libpq5 \
+    && apt-get purge -y --auto-remove libpq-dev \
+    && rm -rf /var/lib/apt/lists/*
+WORKDIR /app
+COPY . .
+COPY --from=vendor /app/vendor ./vendor
+COPY docker/php.ini /usr/local/etc/php/conf.d/99-benchmark.ini
+COPY docker/fpm.conf /usr/local/etc/php-fpm.d/zz-benchmark.conf.template
+RUN mkdir -p storage/framework/{cache,sessions,views} storage/logs bootstrap/cache \
+    && chown -R www-data:www-data storage bootstrap/cache
+CMD ["sh", "-c", "php artisan package:discover --ansi && php artisan config:cache && php artisan route:cache && sed 's/APP_WORKERS/'${APP_WORKERS:-4}'/' /usr/local/etc/php-fpm.d/zz-benchmark.conf.template > /usr/local/etc/php-fpm.d/zz-benchmark.conf && exec php-fpm -F"]

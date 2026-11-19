@@ -1,0 +1,23 @@
+.env
+.env.*
+!.env.example
+**/vendor/
+**/node_modules/
+**/build/
+**/.adonisjs/
+**/storage/logs/*.log
+results/*.json
+results/*.csv
+results/contracts/
+monitoring/*.log
+monitoring/*.csv
+.DS_Store
+
+# Local AI/tooling metadata generated during development.
+laravel-bench/.agents/
+laravel-bench/.claude/
+laravel-bench/.mcp.json
+laravel-bench/AGENTS.md
+laravel-bench/CLAUDE.md
+laravel-bench/boost.json
+laravel-bench/.npmrc
