@@ -40,4 +40,5 @@ router.use([() => import('@adonisjs/core/bodyparser_middleware')])
  */
 export const middleware = router.named({
   benchToken: () => import('#middleware/benchmark_token_middleware'),
+  benchSession: () => import('#middleware/benchmark_session_middleware'),
 })

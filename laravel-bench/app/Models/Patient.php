@@ -9,10 +9,12 @@ class Patient extends Model
 {
     protected $fillable = [
         'external_id',
+        'document',
         'first_name',
         'last_name',
         'birth_date',
         'email',
+        'phone',
     ];
 
     protected function casts(): array

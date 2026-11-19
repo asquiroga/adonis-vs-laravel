@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Middleware\BenchmarkSessionAuth;
 use App\Http\Middleware\BenchmarkToken;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
@@ -14,7 +15,10 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
-        $middleware->alias(['bench.token' => BenchmarkToken::class]);
+        $middleware->alias([
+            'bench.session' => BenchmarkSessionAuth::class,
+            'bench.token' => BenchmarkToken::class,
+        ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->shouldRenderJsonWhen(

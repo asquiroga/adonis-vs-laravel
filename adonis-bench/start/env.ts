@@ -25,6 +25,7 @@ export default await Env.create(new URL('../', import.meta.url), {
   DB_POOL_MAX: Env.schema.number(),
   BENCH_READ_TOKEN: Env.schema.string(),
   BENCH_WRITE_TOKEN: Env.schema.string(),
+  BENCH_SESSION_TTL_SECONDS: Env.schema.number(),
 
   // App
   APP_KEY: Env.schema.secret(),

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 if [[ $# -ne 1 ]]; then echo "Usage: $0 <backend-label>" >&2; exit 1; fi
-cd "$(dirname "${BASH_SOURCE[0]}")/.."
+cd "$(dirname "${BASH_SOURCE[0]}")/../.."
 label="$1"
 base="${BASE_URL:-http://127.0.0.1:8080}"
 directory="results/contracts/$label"

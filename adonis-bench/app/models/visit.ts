@@ -6,6 +6,7 @@ import Patient from '#models/patient'
 export default class Visit extends BaseModel {
   @column({ isPrimary: true }) declare id: number
   @column({ columnName: 'patient_id' }) declare patientId: number
+  @column({ columnName: 'doctor_id' }) declare doctorId: number | null
   @column.dateTime({ columnName: 'visited_at' }) declare visitedAt: DateTime
   @column() declare type: 'consultation' | 'follow_up' | 'emergency' | 'telemedicine'
   @column() declare notes: string | null

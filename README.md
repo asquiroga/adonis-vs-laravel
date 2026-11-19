@@ -8,6 +8,12 @@ Repositorio reproducible para comparar, sin inventar resultados:
 
 Cada prueba ejecuta **un solo backend** en el puerto `8080`. PostgreSQL corre en el mismo host, como en el objetivo de producción, y k6 debe ejecutarse desde otra máquina para no consumir el presupuesto del VPS.
 
+## Campaña realista autenticada (v2)
+
+La campaña recomendada ahora usa sesiones opacas en PostgreSQL, cookies y CSRF, roles `admin`/`doctor`/`reception`, autorización por pacientes asignados, mezcla 90/10, acceso Pareto 80/20 y escenarios de tasa abierta. La guía completa y los comandos exactos están en [`docs/V2_BENCHMARK.md`](docs/V2_BENCHMARK.md).
+
+Los scripts públicos anteriores se conservaron sin cambios funcionales en `legacy/`. No mezclar sus resultados con v2.
+
 ## Versiones fijadas
 
 La selección se revisó contra la documentación oficial el 19 de noviembre de 2026:
@@ -133,40 +139,40 @@ Las fechas son UTC ISO-8601 con exactamente milisegundos (`YYYY-MM-DDTHH:mm:ss.S
 Con el backend activo, desde la máquina generadora:
 
 ```bash
-BASE_URL=http://IP_DEL_VPS:8080 ./scripts/verify-contract.sh
+BASE_URL=http://IP_DEL_VPS:8080 ./legacy/scripts/verify-contract.sh
 ```
 
 Para demostrar equivalencia byte a byte de las respuestas deterministas, resetear las escrituras, iniciar cada backend por separado y capturar:
 
 ```bash
 ./scripts/db/reset-writes.sh
-BASE_URL=http://127.0.0.1:8080 ./scripts/capture-contract.sh octane
+BASE_URL=http://127.0.0.1:8080 ./legacy/scripts/capture-contract.sh octane
 # detener Octane, iniciar Adonis
 ./scripts/db/reset-writes.sh
-BASE_URL=http://127.0.0.1:8080 ./scripts/capture-contract.sh adonis
-./scripts/compare-contracts.sh octane adonis
+BASE_URL=http://127.0.0.1:8080 ./legacy/scripts/capture-contract.sh adonis
+./legacy/scripts/compare-contracts.sh octane adonis
 ```
 
-La captura compara JSON fijo, listado, detalle y error de validación. `k6/verify.js` además verifica creación, HTTP 201 y forma de respuesta. Ejecutar la misma secuencia para FPM si se incluye.
+La captura compara JSON fijo, listado, detalle y error de validación. `legacy/k6/verify.js` además verifica creación, HTTP 201 y forma de respuesta. Ejecutar la misma secuencia para FPM si se incluye.
 
 ## Fase 2: autenticación y autorización
 
 No mezclar con la fase pública. Las rutas son idénticas bajo `/bench-auth`. El token de lectura autoriza sólo GET; el de escritura autoriza GET y POST. Defaults de laboratorio: `bench-read-token` y `bench-write-token`; cambiarlos en `.env` antes de exponer el puerto.
 
 ```bash
-AUTH=true BENCH_TOKEN=bench-write-token BASE_URL=http://IP_DEL_VPS:8080 ./scripts/verify-contract.sh
+AUTH=true BENCH_TOKEN=bench-write-token BASE_URL=http://IP_DEL_VPS:8080 ./legacy/scripts/verify-contract.sh
 ```
 
 El middleware es equivalente en ambos proyectos y devuelve el mismo 401 (sin bearer) o 403 (token/scope incorrecto). Esta fase mide el costo del control bearer/scope, no un proveedor OAuth externo.
 
 ## Campaña k6
 
-`scripts/k6-run.sh` hace un calentamiento separado y luego una prueba de tasa de llegada creciente. Ejecutarlo **desde otra máquina**, con una copia de `k6/` y `scripts/k6-run.sh`:
+`legacy/scripts/k6-run.sh` hace un calentamiento separado y luego una prueba de tasa de llegada creciente. Ejecutarlo **desde otra máquina**:
 
 ```bash
-BASE_URL=http://IP_DEL_VPS:8080 ./scripts/k6-run.sh octane read public
-BASE_URL=http://IP_DEL_VPS:8080 ./scripts/k6-run.sh octane write public
-BASE_URL=http://IP_DEL_VPS:8080 ./scripts/k6-run.sh octane mixed public
+BASE_URL=http://IP_DEL_VPS:8080 ./legacy/scripts/k6-run.sh octane read public
+BASE_URL=http://IP_DEL_VPS:8080 ./legacy/scripts/k6-run.sh octane write public
+BASE_URL=http://IP_DEL_VPS:8080 ./legacy/scripts/k6-run.sh octane mixed public
 ```
 
 Antes de cada prueba de escritura o mixta comparable, en el VPS:
@@ -178,13 +184,13 @@ Antes de cada prueba de escritura o mixta comparable, en el VPS:
 Para fase autenticada:
 
 ```bash
-BASE_URL=http://IP_DEL_VPS:8080 BENCH_TOKEN=bench-write-token ./scripts/k6-run.sh octane read auth
+BASE_URL=http://IP_DEL_VPS:8080 BENCH_TOKEN=bench-write-token ./legacy/scripts/k6-run.sh octane read auth
 ```
 
 Defaults: warmup 50 req/s durante 30 s; medición con 25→50 req/s (1 min), 100 req/s (2 min) y 200 req/s (2 min). Son tasas ofrecidas iniciales, no estimaciones de capacidad. Ajustar con variables, por ejemplo:
 
 ```bash
-RATE_START=50 RATE_1=100 RATE_2=250 RATE_3=500 STAGE_1=2m STAGE_2=3m STAGE_3=3m MAX_VUS=2000 BASE_URL=http://IP_DEL_VPS:8080 ./scripts/k6-run.sh adonis mixed public
+RATE_START=50 RATE_1=100 RATE_2=250 RATE_3=500 STAGE_1=2m STAGE_2=3m STAGE_3=3m MAX_VUS=2000 BASE_URL=http://IP_DEL_VPS:8080 ./legacy/scripts/k6-run.sh adonis mixed public
 ```
 
 Los artefactos JSON incluyen throughput exitoso (`successful_requests`), p50 (`med`), p95, p99, errores de aplicación/HTTP, timeouts y `dropped_iterations`. Confirmar que la propia máquina k6 no satura CPU, red ni VUs. Una tasa con iteraciones descartadas no equivale a throughput alcanzado.
@@ -202,7 +208,7 @@ Aplicar el mismo orden rotado por separado a lectura, escritura, mixta y luego a
 Justo antes de lanzar k6, en el VPS:
 
 ```bash
-./scripts/monitor.sh octane-read-r1 &
+./legacy/scripts/monitor.sh octane-read-r1 &
 MONITOR_PID=$!
 ```
 

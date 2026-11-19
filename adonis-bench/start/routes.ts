@@ -11,6 +11,8 @@ import { middleware } from '#start/kernel'
 import router from '@adonisjs/core/services/router'
 
 const BenchmarkController = () => import('#controllers/benchmark_controller')
+const BenchmarkAuthController = () => import('#controllers/benchmark_auth_controller')
+const BenchmarkV2Controller = () => import('#controllers/benchmark_v2_controller')
 
 router
   .group(() => {
@@ -41,3 +43,24 @@ router
       .use(middleware.benchToken({ scope: 'write' }))
   })
   .prefix('/bench-auth')
+
+router
+  .group(() => {
+    router.get('health', [BenchmarkV2Controller, 'health'])
+    router.post('auth/login', [BenchmarkAuthController, 'login'])
+
+    router
+      .group(() => {
+        router.get('auth/me', [BenchmarkAuthController, 'me'])
+        router.post('auth/logout', [BenchmarkAuthController, 'logout'])
+        router.get('patients', [BenchmarkV2Controller, 'patients'])
+        router.get('patients/:id', [BenchmarkV2Controller, 'patient'])
+        router.patch('patients/:id', [BenchmarkV2Controller, 'updatePatient'])
+        router.get('visits/:id', [BenchmarkV2Controller, 'visit'])
+        router.post('visits', [BenchmarkV2Controller, 'createVisit'])
+        router.get('agenda', [BenchmarkV2Controller, 'agenda'])
+        router.post('appointments', [BenchmarkV2Controller, 'createAppointment'])
+      })
+      .use(middleware.benchSession())
+  })
+  .prefix('/bench-v2')

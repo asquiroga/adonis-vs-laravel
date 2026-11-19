@@ -11,6 +11,10 @@ results/*.csv
 results/contracts/
 monitoring/*.log
 monitoring/*.csv
+monitoring/*.pid
+monitoring/*-runner.log
+database/baseline/*.dump
+campaigns/
 .DS_Store
 
 # Local AI/tooling metadata generated during development.
