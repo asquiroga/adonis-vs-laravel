@@ -28,7 +28,7 @@ network_median_ms="$(tail -n +2 "$curl_samples" | cut -d, -f2 | sort -n | awk 'N
 
 if [[ "${SKIP_WARMUP:-0}" != 1 && "$scenario" != login_burst ]]; then
   echo "Warm-up ${WARMUP_DURATION:-2m} at ${WARMUP_RATE:-30} req/s"
-  k6 run --quiet \
+  k6 run --quiet --no-thresholds \
     -e SCENARIO=mixed_steady -e RATE="${WARMUP_RATE:-30}" -e DURATION="${WARMUP_DURATION:-2m}" \
     -e BASE_URL="$BASE_URL" -e BENCHMARK_PASSWORD="$BENCHMARK_PASSWORD" -e WRITE_RATIO="${WRITE_RATIO:-0.1}" \
     -e SEED="${SEED:-20261119}" k6/main.js >/dev/null
