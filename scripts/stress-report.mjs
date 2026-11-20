@@ -35,17 +35,27 @@ for (const row of rows) {
   )
 }
 
-lines.push('', '## Observed ceilings', '')
+lines.push('', '## Capacity bounds', '')
 for (const backend of ['adonis', 'octane']) {
   const backendRows = rows.filter((row) => row.backend === backend)
   const repetitions = [...new Set(backendRows.map((row) => row.repetition))]
   if (!repetitions.length) continue
   for (const repetition of repetitions) {
-    const passedRates = backendRows.filter((row) => row.repetition === repetition && row.passed).map((row) => row.rate)
-    lines.push(`- ${backend}, repetition ${repetition}: ${passedRates.length ? `${Math.max(...passedRates)} req/s` : 'no passing step'}.`)
+    const repetitionRows = backendRows.filter((row) => row.repetition === repetition)
+    const passedRates = repetitionRows.filter((row) => row.passed).map((row) => row.rate)
+    const failedRates = repetitionRows.filter((row) => !row.passed).map((row) => row.rate)
+    if (!passedRates.length) {
+      lines.push(`- ${backend}, repetition ${repetition}: no passing step; first failure at ${Math.min(...failedRates)} req/s.`)
+    } else if (failedRates.length) {
+      lines.push(
+        `- ${backend}, repetition ${repetition}: highest passing step ${Math.max(...passedRates)} req/s; first failure at ${Math.min(...failedRates)} req/s.`,
+      )
+    } else {
+      lines.push(`- ${backend}, repetition ${repetition}: at least ${Math.max(...passedRates)} req/s; no failing step was observed.`)
+    }
   }
 }
-lines.push('', 'These are observed ceilings under this workload and SLO, not extrapolated maximum capacity.', '')
+lines.push('', 'These are observed bounds under this workload and SLO. A highest passing step without a subsequent failure is not a maximum.', '')
 
 fs.writeFileSync(output, `${lines.join('\n')}\n`)
 console.log(output)

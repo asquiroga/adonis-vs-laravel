@@ -144,7 +144,7 @@ El informe muestra mediana y rango de throughput exitoso, p50/p95/p99, errores, 
 - `scripts/run-matrix.sh`: alternancia/restauración/orquestación.
 - `scripts/run-stress-ladder.sh`: escalera autenticada 20→200 req/s, dividida 10/40/50 por rol y con detención automática al primer escalón fallido.
 - `scripts/evaluate-stress.mjs`: aplica el SLO de capacidad a cada escalón.
-- `scripts/stress-report.mjs`: tabla y techo observado por backend/repetición.
+- `scripts/stress-report.mjs`: tabla y límites de capacidad observados por backend/repetición.
 - `scripts/report.mjs`: mediana y rango.
 - `results/V2_RESULTS_TEMPLATE.md`: checklist manual de campaña.
 
@@ -177,4 +177,4 @@ BASE_URL=http://IP_PUBLICA_DEL_VPS BENCHMARK_PASSWORD='PASSWORD_DE_BENCHMARK' \
 CAMPAIGN=stress-smoke ./scripts/run-stress-ladder.sh
 ```
 
-La primera campaña es exploratoria. Después se repiten al menos tres veces los escalones cercanos al punto de quiebre, alternando el backend inicial. Un techo es siempre observado bajo este workload y SLO; no se extrapola.
+La primera campaña es exploratoria. Después se repiten al menos tres veces los escalones cercanos al punto de quiebre, alternando el backend inicial. Si todos los escalones pasan, el resultado es “al menos la tasa más alta probada”, no un máximo. Si uno falla, el último aprobado y el primero fallido forman un intervalo de capacidad bajo este workload y SLO; no se extrapola.
