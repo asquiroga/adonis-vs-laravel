@@ -8,20 +8,25 @@ import { record } from './metrics.js'
 let session
 
 export function currentUser() {
-  return userForVu(exec.vu.idInTest)
+  return userForVu(exec.vu.idInTest, __ENV.BENCH_ROLE || null)
 }
 
 export function login(force = false) {
   if (session && !force) return session
   const user = currentUser()
   const tags = { endpoint: 'auth.login', role: user.role }
-  const response = http.post(
-    `${config.baseUrl}/bench-v2/auth/login`,
-    JSON.stringify({ email: user.email, password: config.password }),
-    { headers: { 'Content-Type': 'application/json' }, tags }
-  )
+  const response = http.post(`${config.baseUrl}/bench-v2/auth/login`, JSON.stringify({ email: user.email, password: config.password }), {
+    headers: { 'Content-Type': 'application/json' },
+    tags,
+  })
   const ok = record(response, 200, tags, 'login')
-  check(response, { 'login returns user and csrf': (r) => ok && Boolean(r.json('data.csrf_token')) }, tags)
+  check(
+    response,
+    {
+      'login returns user and csrf': (r) => ok && Boolean(r.json('data.csrf_token')),
+    },
+    tags,
+  )
   if (!ok) throw new Error(`Login failed for ${user.email}: HTTP ${response.status}`)
   session = { user, csrf: response.json('data.csrf_token') }
   return session

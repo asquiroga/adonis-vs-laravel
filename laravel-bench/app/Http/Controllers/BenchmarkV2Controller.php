@@ -103,7 +103,7 @@ class BenchmarkV2Controller extends Controller
         $user = $this->user($request);
         $validator = Validator::make($request->query(), [
             'date' => ['required', 'date_format:Y-m-d'],
-            'doctor_id' => ['sometimes', 'integer', 'min:1', 'max:100', Rule::exists('doctors', 'id')],
+            'doctor_id' => ['sometimes', 'integer', 'min:1', 'max:150', Rule::exists('doctors', 'id')],
         ]);
         if ($validator->fails()) {
             return $this->validationError($validator->errors()->toArray());
@@ -139,7 +139,7 @@ class BenchmarkV2Controller extends Controller
 
         $validator = Validator::make($request->all(), [
             'patient_id' => ['bail', 'required', 'integer', 'min:1', 'max:100000', Rule::exists('patients', 'id')],
-            'doctor_id' => ['sometimes', 'integer', 'min:1', 'max:100', Rule::exists('doctors', 'id')],
+            'doctor_id' => ['sometimes', 'integer', 'min:1', 'max:150', Rule::exists('doctors', 'id')],
             'visited_at' => ['required', 'date_format:Y-m-d\TH:i:s.v\Z'],
             'type' => ['required', Rule::in(['consultation', 'follow_up', 'emergency', 'telemedicine'])],
             'notes' => ['present', 'nullable', 'string', 'max:1000'],
@@ -203,7 +203,7 @@ class BenchmarkV2Controller extends Controller
 
         $validator = Validator::make($request->all(), [
             'patient_id' => ['bail', 'required', 'integer', 'min:1', 'max:100000', Rule::exists('patients', 'id')],
-            'doctor_id' => ['bail', 'required', 'integer', 'min:1', 'max:100', Rule::exists('doctors', 'id')],
+            'doctor_id' => ['bail', 'required', 'integer', 'min:1', 'max:150', Rule::exists('doctors', 'id')],
             'scheduled_at' => ['required', 'date_format:Y-m-d\TH:i:s.v\Z'],
             'reason' => ['required', 'string', 'max:255'],
         ]);

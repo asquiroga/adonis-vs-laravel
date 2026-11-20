@@ -4,10 +4,10 @@ Esta campaña compara el trabajo real de una aplicación clínica: autenticació
 
 ## Supuestos y decisiones
 
-- Un único esquema SQL y seed alimenta ambos ORMs. Hay 100.000 pacientes, 500.000 visitas, 200.000 turnos, 20 admins, 100 médicos y 100 recepcionistas.
+- Un único esquema SQL y seed alimenta ambos ORMs. Hay 100.000 pacientes, 500.000 visitas, 200.000 turnos, 20 admins, 150 prestadores/médicos y 100 recepcionistas. Esto modela menos de 200 usuarios internos y hasta 150 prestadores que usan el producto.
 - Todos los usuarios comparten sólo en este benchmark la contraseña `BENCHMARK_PASSWORD`; el seed guarda bcrypt, nunca texto plano.
 - La mezcla de VUs es 10% admin, 40% médico y 50% recepción. Cada VU inicia sesión una vez y reutiliza cookie/CSRF; `login_burst` es la única excepción.
-- Los médicos tienen 1.000 pacientes primarios y una asignación secundaria para cada décimo paciente. Los 403 esperados ocurren con 1% de las lecturas de médicos por defecto.
+- Los médicos tienen 666 o 667 pacientes primarios y una asignación secundaria distribuida entre cada décimo paciente. Los 403 esperados ocurren con 1% de las lecturas de médicos por defecto.
 - La selección reproducible usa `SEED`. El 80% de las selecciones cae en el 20% inicial de pacientes; 85% de páginas cae entre 1 y 3.
 - `APP_WORKERS=4` queda fijo. En Adonis `DB_CONNECTION_BUDGET=10`, por ejemplo, reparte pools 3/3/2/2 entre workers. Octane/PHP no tiene un pool cliente equivalente: cada worker usa como máximo una conexión PDO activa. El reporte conserva esta diferencia; no pretende que “pool 20” cree 20 conexiones en PHP.
 - No hay caché de respuestas. Las cookies no se marcan `Secure` porque el benchmark puede usar HTTP directo; si se coloca TLS delante, cambiar esa opción en ambos backends antes de una campaña nueva.
@@ -142,7 +142,39 @@ El informe muestra mediana y rango de throughput exitoso, p50/p95/p99, errores, 
 - `scripts/run-scenario.sh`: warm-up, latencia base, k6 y monitor de la Mac.
 - `scripts/monitor.sh`: monitor persistente del VPS, con `start`/`stop` recuperable tras cortar SSH.
 - `scripts/run-matrix.sh`: alternancia/restauración/orquestación.
+- `scripts/run-stress-ladder.sh`: escalera autenticada 20→200 req/s, dividida 10/40/50 por rol y con detención automática al primer escalón fallido.
+- `scripts/evaluate-stress.mjs`: aplica el SLO de capacidad a cada escalón.
+- `scripts/stress-report.mjs`: tabla y techo observado por backend/repetición.
 - `scripts/report.mjs`: mediana y rango.
 - `results/V2_RESULTS_TEMPLATE.md`: checklist manual de campaña.
 
 Variables principales: `BASE_URL`, `BENCHMARK_PASSWORD`, `SCENARIO`, `RATE`, `DURATION`, `WRITE_RATIO`, `SEED`, `APP_WORKERS`, `DB_CONNECTION_BUDGET`, `PRE_VUS`, `MAX_VUS`, `WARMUP_RATE`, `WARMUP_DURATION`, `NEGATIVE_RATIO`.
+
+## Escalera de stress autenticada
+
+La escalera formal ejecuta tasas independientes de 20, 40, 80, 120, 160 y 200 req/s. Antes de cada escalón restaura el baseline y recrea el backend; después hace 30 segundos de warm-up a la misma tasa y mide durante 3 minutos. La carga se divide en tres escenarios simultáneos: 10% admin, 40% médico/prestador y 50% recepción. La escritura es exactamente 10% por rol. La acción y los datos relativos se eligen con la semilla y el índice de iteración del rol; la identidad concreta del usuario se distribuye entre los VUs disponibles para representar múltiples sesiones concurrentes.
+
+Un escalón pasa solamente si completa al menos 99% de la tasa ofrecida, tiene errores menores a 0,5%, cero timeouts, menos de 1% de iteraciones descartadas, checks de al menos 99,5%, lecturas p95 menores a 500 ms y escrituras p95 menores a 800 ms. El orquestador detiene ese backend al primer fallo.
+
+Desde la Mac, después de regenerar el baseline y reconstruir ambos backends en el VPS:
+
+```bash
+SSH_TARGET=vps-medihome \
+REMOTE_DIR=/home/alfonso/adonis-vs-laravel \
+BASE_URL=http://IP_PUBLICA_DEL_VPS \
+BENCHMARK_PASSWORD='PASSWORD_DE_BENCHMARK' \
+CAMPAIGN=stress-auth-r1 \
+REPETITIONS=1 \
+./scripts/run-stress-ladder.sh
+```
+
+Para una prueba corta del orquestador:
+
+```bash
+RATES='20 40' STEP_DURATION=30s WARMUP_DURATION=10s \
+SSH_TARGET=vps-medihome REMOTE_DIR=/home/alfonso/adonis-vs-laravel \
+BASE_URL=http://IP_PUBLICA_DEL_VPS BENCHMARK_PASSWORD='PASSWORD_DE_BENCHMARK' \
+CAMPAIGN=stress-smoke ./scripts/run-stress-ladder.sh
+```
+
+La primera campaña es exploratoria. Después se repiten al menos tres veces los escalones cercanos al punto de quiebre, alternando el backend inicial. Un techo es siempre observado bajo este workload y SLO; no se extrapola.

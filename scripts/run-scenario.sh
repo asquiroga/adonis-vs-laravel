@@ -15,7 +15,8 @@ command -v k6 >/dev/null || { echo 'k6 is required' >&2; exit 1; }
 
 campaign="${CAMPAIGN:-$(date -u +%Y%m%dT%H%M%SZ)}"
 pool="${DB_CONNECTION_BUDGET:-4}"
-label="${campaign}/${scenario}-${backend}-pool${pool}-r${repetition}"
+run_name="${RUN_NAME:-$scenario}"
+label="${campaign}/${run_name}-${backend}-pool${pool}-r${repetition}"
 run_dir="${RESULTS_DIR:-results/campaigns}/$label"
 mkdir -p "$run_dir"
 
@@ -28,10 +29,13 @@ network_median_ms="$(tail -n +2 "$curl_samples" | cut -d, -f2 | sort -n | awk 'N
 
 if [[ "${SKIP_WARMUP:-0}" != 1 && "$scenario" != login_burst ]]; then
   echo "Warm-up ${WARMUP_DURATION:-2m} at ${WARMUP_RATE:-30} req/s"
+  warmup_scenario=mixed_steady
+  [[ "$scenario" == stress_step ]] && warmup_scenario=stress_step
   k6 run --quiet --no-thresholds \
-    -e SCENARIO=mixed_steady -e RATE="${WARMUP_RATE:-30}" -e DURATION="${WARMUP_DURATION:-2m}" \
+    -e SCENARIO="$warmup_scenario" -e RATE="${WARMUP_RATE:-30}" -e DURATION="${WARMUP_DURATION:-2m}" \
     -e BASE_URL="$BASE_URL" -e BENCHMARK_PASSWORD="$BENCHMARK_PASSWORD" -e WRITE_RATIO="${WRITE_RATIO:-0.1}" \
-    -e SEED="${SEED:-20261119}" k6/main.js >/dev/null
+    -e SEED="${SEED:-20261119}" -e PRE_VUS="${PRE_VUS:-30}" -e MAX_VUS="${MAX_VUS:-300}" \
+    -e NEGATIVE_RATIO="${NEGATIVE_RATIO:-0.01}" k6/main.js >/dev/null
 fi
 
 cat > "$run_dir/metadata.env" <<EOF
@@ -39,18 +43,21 @@ timestamp_utc=$(date -u +%Y-%m-%dT%H:%M:%SZ)
 git_commit=$(git rev-parse HEAD)
 backend=$backend
 scenario=$scenario
+run_name=$run_name
 repetition=$repetition
 base_url=$BASE_URL
 seed=${SEED:-20261119}
 write_ratio=${WRITE_RATIO:-0.1}
 rate=${RATE:-scenario-default}
 duration=${DURATION:-scenario-default}
-pre_vus=${PRE_VUS:-100}
-max_vus=${MAX_VUS:-1000}
+pre_vus=${PRE_VUS:-30}
+max_vus=${MAX_VUS:-300}
 warmup_rate=${WARMUP_RATE:-30}
 warmup_duration=${WARMUP_DURATION:-2m}
 workers=${APP_WORKERS:-4}
 db_connection_budget=$pool
+modeled_internal_users=120
+modeled_providers=150
 k6_version=$(k6 version | head -1)
 generator=$(uname -a)
 network_baseline_median_ms=$network_median_ms
@@ -58,7 +65,9 @@ EOF
 
 args=(run --summary-export "$run_dir/summary.json"
   -e SCENARIO="$scenario" -e BASE_URL="$BASE_URL" -e BENCHMARK_PASSWORD="$BENCHMARK_PASSWORD"
-  -e WRITE_RATIO="${WRITE_RATIO:-0.1}" -e SEED="${SEED:-20261119}")
+  -e WRITE_RATIO="${WRITE_RATIO:-0.1}" -e SEED="${SEED:-20261119}"
+  -e PRE_VUS="${PRE_VUS:-30}" -e MAX_VUS="${MAX_VUS:-300}"
+  -e NEGATIVE_RATIO="${NEGATIVE_RATIO:-0.01}")
 [[ -n "${RATE:-}" ]] && args+=(-e RATE="$RATE")
 [[ -n "${DURATION:-}" ]] && args+=(-e DURATION="$DURATION")
 if [[ "${K6_RAW_OUTPUT:-0}" == 1 ]]; then args+=(--out "json=$run_dir/samples.json"); fi

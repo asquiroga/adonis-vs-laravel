@@ -105,7 +105,7 @@ export default class BenchmarkV2Controller {
       doctorInput !== undefined &&
       (!Number.isInteger(Number(doctorInput)) ||
         Number(doctorInput) < 1 ||
-        Number(doctorInput) > 100)
+        Number(doctorInput) > 150)
     )
       fields.push('doctor_id')
     if (fields.length) return this.validation(response, fields)
@@ -253,7 +253,7 @@ export default class BenchmarkV2Controller {
 
   private validDoctorId(input: unknown) {
     const id = Number(input)
-    return Number.isInteger(id) && id >= 1 && id <= 100
+    return Number.isInteger(id) && id >= 1 && id <= 150
   }
 
   private parseInstant(input: unknown) {

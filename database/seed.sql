@@ -22,22 +22,22 @@ FROM generate_series(1, 20) AS s(n);
 
 INSERT INTO benchmark_users (id, email, password_hash, role, display_name)
 SELECT 20 + n, 'doctor' || lpad(n::text, 3, '0') || '@benchmark.invalid', :'benchmark_password_hash', 'doctor', 'Médico ' || n
-FROM generate_series(1, 100) AS s(n);
+FROM generate_series(1, 150) AS s(n);
 
 INSERT INTO benchmark_users (id, email, password_hash, role, display_name)
-SELECT 120 + n, 'reception' || lpad(n::text, 3, '0') || '@benchmark.invalid', :'benchmark_password_hash', 'reception', 'Recepción ' || n
+SELECT 170 + n, 'reception' || lpad(n::text, 3, '0') || '@benchmark.invalid', :'benchmark_password_hash', 'reception', 'Recepción ' || n
 FROM generate_series(1, 100) AS s(n);
 
 INSERT INTO doctors (id, user_id, license_number, specialty)
 SELECT n, 20 + n, 'MN-' || lpad(n::text, 6, '0'), (ARRAY['Clínica', 'Cardiología', 'Pediatría', 'Dermatología'])[(n % 4) + 1]
-FROM generate_series(1, 100) AS s(n);
+FROM generate_series(1, 150) AS s(n);
 
 INSERT INTO doctor_patients (doctor_id, patient_id, assigned_at)
-SELECT ((n - 1) % 100) + 1, n, TIMESTAMPTZ '2025-01-01 00:00:00+00'
+SELECT ((n - 1) % 150) + 1, n, TIMESTAMPTZ '2025-01-01 00:00:00+00'
 FROM generate_series(1, 100000) AS s(n);
 
 INSERT INTO doctor_patients (doctor_id, patient_id, assigned_at)
-SELECT ((n + 36) % 100) + 1, n, TIMESTAMPTZ '2025-06-01 00:00:00+00'
+SELECT ((n + 36) % 150) + 1, n, TIMESTAMPTZ '2025-06-01 00:00:00+00'
 FROM generate_series(10, 100000, 10) AS s(n)
 ON CONFLICT DO NOTHING;
 
@@ -45,7 +45,7 @@ INSERT INTO visits (id, patient_id, doctor_id, visited_at, type, notes, created_
 SELECT
     n,
     (((n::bigint * 7919) % 100000) + 1)::bigint,
-    (((n::bigint * 7919) % 100) + 1)::bigint,
+    (((n::bigint * 7919) % 100000) % 150 + 1)::bigint,
     TIMESTAMPTZ '2024-01-01 00:00:00+00' + ((n % 63072000) * INTERVAL '1 second'),
     (ARRAY['consultation', 'follow_up', 'emergency', 'telemedicine'])[(n % 4) + 1],
     'Visita ficticia ' || n,
@@ -57,7 +57,7 @@ INSERT INTO appointments (id, patient_id, doctor_id, scheduled_at, status, reaso
 SELECT
     n,
     (((n::bigint * 3571) % 100000) + 1)::bigint,
-    (((n::bigint * 3571) % 100) + 1)::bigint,
+    (((n::bigint * 3571) % 100000) % 150 + 1)::bigint,
     TIMESTAMPTZ '2026-01-01 08:00:00+00' + ((n % 365) * INTERVAL '1 day') + ((n % 36) * INTERVAL '15 minutes'),
     (ARRAY['scheduled', 'confirmed', 'completed', 'cancelled'])[(n % 4) + 1],
     'Turno ficticio ' || n,
@@ -66,8 +66,8 @@ SELECT
 FROM generate_series(1, 200000) AS s(n);
 
 SELECT setval(pg_get_serial_sequence('patients', 'id'), 100000, true);
-SELECT setval(pg_get_serial_sequence('benchmark_users', 'id'), 220, true);
-SELECT setval(pg_get_serial_sequence('doctors', 'id'), 100, true);
+SELECT setval(pg_get_serial_sequence('benchmark_users', 'id'), 270, true);
+SELECT setval(pg_get_serial_sequence('doctors', 'id'), 150, true);
 SELECT setval(pg_get_serial_sequence('visits', 'id'), 500000, true);
 SELECT setval(pg_get_serial_sequence('appointments', 'id'), 200000, true);
 
