@@ -26,12 +26,12 @@ const lines = [
   '',
   'Each row is an independent constant-arrival-rate step. PASS requires completion ≥99%, errors <0.5%, no timeouts, dropped iterations <1%, checks ≥99.5%, read p95 <500 ms, and write p95 <800 ms.',
   '',
-  '| Rep | Backend | Offered req/s | Verdict | Completion % | Successful HTTP/s | Errors % | Timeouts | Dropped % | p50 ms | p95 ms | p99 ms | Read p95 | Write p95 |',
-  '|---:|---|---:|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|',
+  '| Rep | Backend | Offered req/s | Verdict | Completion % | Successful HTTP/s | Errors % | Timeouts | Dropped % | p50 ms | p95 ms | p99 ms | Read p95 | Write p95 | Worst endpoint p95 |',
+  '|---:|---|---:|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---|',
 ]
 for (const row of rows) {
   lines.push(
-    `| ${row.repetition} | ${row.backend} | ${row.rate} | ${row.passed ? 'PASS' : 'FAIL'} | ${(row.completion_ratio * 100).toFixed(2)} | ${row.successful_http_requests_per_second.toFixed(2)} | ${(row.error_rate * 100).toFixed(3)} | ${row.timeouts} | ${(row.dropped_ratio * 100).toFixed(3)} | ${row.http_p50_ms.toFixed(2)} | ${row.http_p95_ms.toFixed(2)} | ${row.http_p99_ms.toFixed(2)} | ${row.read_p95_ms.toFixed(2)} | ${row.write_p95_ms.toFixed(2)} |`,
+    `| ${row.repetition} | ${row.backend} | ${row.rate} | ${row.passed ? 'PASS' : 'FAIL'} | ${(row.completion_ratio * 100).toFixed(2)} | ${row.successful_http_requests_per_second.toFixed(2)} | ${(row.error_rate * 100).toFixed(3)} | ${row.timeouts} | ${(row.dropped_ratio * 100).toFixed(3)} | ${row.http_p50_ms.toFixed(2)} | ${row.http_p95_ms.toFixed(2)} | ${row.http_p99_ms.toFixed(2)} | ${row.read_p95_ms.toFixed(2)} | ${row.write_p95_ms.toFixed(2)} | ${row.worst_endpoint ? `${row.worst_endpoint} (${row.worst_endpoint_p95_ms.toFixed(2)} ms)` : 'n/a'} |`,
   )
 }
 
@@ -44,8 +44,13 @@ for (const backend of ['adonis', 'octane']) {
     const repetitionRows = backendRows.filter((row) => row.repetition === repetition)
     const passedRates = repetitionRows.filter((row) => row.passed).map((row) => row.rate)
     const failedRates = repetitionRows.filter((row) => !row.passed).map((row) => row.rate)
+    const nonMonotonic = failedRates.some((failedRate) => passedRates.some((passedRate) => passedRate > failedRate))
     if (!passedRates.length) {
       lines.push(`- ${backend}, repetition ${repetition}: no passing step; first failure at ${Math.min(...failedRates)} req/s.`)
+    } else if (nonMonotonic) {
+      lines.push(
+        `- ${backend}, repetition ${repetition}: non-monotonic result (passed: ${passedRates.join(', ')} req/s; failed: ${failedRates.join(', ')} req/s); repeat before assigning a capacity bound.`,
+      )
     } else if (failedRates.length) {
       lines.push(
         `- ${backend}, repetition ${repetition}: highest passing step ${Math.max(...passedRates)} req/s; first failure at ${Math.min(...failedRates)} req/s.`,

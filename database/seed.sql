@@ -32,6 +32,18 @@ INSERT INTO doctors (id, user_id, license_number, specialty)
 SELECT n, 20 + n, 'MN-' || lpad(n::text, 6, '0'), (ARRAY['Clínica', 'Cardiología', 'Pediatría', 'Dermatología'])[(n % 4) + 1]
 FROM generate_series(1, 150) AS s(n);
 
+-- Stable benchmark-only sessions keep password hashing and login bursts outside
+-- steady authenticated measurements. login_burst still uses the real endpoint.
+INSERT INTO benchmark_sessions (token_hash, user_id, csrf_token, expires_at, created_at, last_seen_at)
+SELECT
+    encode(digest('benchmark-session:' || email || ':' || :'benchmark_password', 'sha256'), 'hex'),
+    id,
+    'csrf-' || lpad(id::text, 59, '0'),
+    TIMESTAMPTZ '2099-01-01 00:00:00+00',
+    TIMESTAMPTZ '2026-01-01 00:00:00+00',
+    TIMESTAMPTZ '2026-01-01 00:00:00+00'
+FROM benchmark_users;
+
 INSERT INTO doctor_patients (doctor_id, patient_id, assigned_at)
 SELECT ((n - 1) % 150) + 1, n, TIMESTAMPTZ '2025-01-01 00:00:00+00'
 FROM generate_series(1, 100000) AS s(n);
@@ -73,6 +85,7 @@ SELECT setval(pg_get_serial_sequence('appointments', 'id'), 200000, true);
 
 ANALYZE patients;
 ANALYZE benchmark_users;
+ANALYZE benchmark_sessions;
 ANALYZE doctors;
 ANALYZE doctor_patients;
 ANALYZE visits;

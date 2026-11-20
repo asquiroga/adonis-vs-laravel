@@ -33,6 +33,7 @@ if [[ "${SKIP_WARMUP:-0}" != 1 && "$scenario" != login_burst ]]; then
   [[ "$scenario" == stress_step ]] && warmup_scenario=stress_step
   k6 run --quiet --no-thresholds \
     -e SCENARIO="$warmup_scenario" -e RATE="${WARMUP_RATE:-30}" -e DURATION="${WARMUP_DURATION:-2m}" \
+    -e BACKEND="$backend" \
     -e BASE_URL="$BASE_URL" -e BENCHMARK_PASSWORD="$BENCHMARK_PASSWORD" -e WRITE_RATIO="${WRITE_RATIO:-0.1}" \
     -e SEED="${SEED:-20261119}" -e PRE_VUS="${PRE_VUS:-30}" -e MAX_VUS="${MAX_VUS:-300}" \
     -e NEGATIVE_RATIO="${NEGATIVE_RATIO:-0.01}" k6/main.js >/dev/null
@@ -58,13 +59,14 @@ workers=${APP_WORKERS:-4}
 db_connection_budget=$pool
 modeled_internal_users=120
 modeled_providers=150
+preauthenticated_sessions=$([[ "$scenario" == stress_step ]] && echo 1 || echo 0)
 k6_version=$(k6 version | head -1)
 generator=$(uname -a)
 network_baseline_median_ms=$network_median_ms
 EOF
 
 args=(run --summary-export "$run_dir/summary.json"
-  -e SCENARIO="$scenario" -e BASE_URL="$BASE_URL" -e BENCHMARK_PASSWORD="$BENCHMARK_PASSWORD"
+  -e SCENARIO="$scenario" -e BACKEND="$backend" -e BASE_URL="$BASE_URL" -e BENCHMARK_PASSWORD="$BENCHMARK_PASSWORD"
   -e WRITE_RATIO="${WRITE_RATIO:-0.1}" -e SEED="${SEED:-20261119}"
   -e PRE_VUS="${PRE_VUS:-30}" -e MAX_VUS="${MAX_VUS:-300}"
   -e NEGATIVE_RATIO="${NEGATIVE_RATIO:-0.01}")

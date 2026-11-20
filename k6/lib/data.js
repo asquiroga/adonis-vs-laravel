@@ -39,6 +39,7 @@ export function userForVu(vuId, forcedRole = null) {
   if (forcedRole === 'admin') {
     const number = ((vuId - 1) % 20) + 1
     return {
+      id: number,
       role: 'admin',
       email: `admin${String(number).padStart(3, '0')}@benchmark.invalid`,
       doctorId: null,
@@ -47,6 +48,7 @@ export function userForVu(vuId, forcedRole = null) {
   if (forcedRole === 'doctor') {
     const number = ((vuId - 1) % 150) + 1
     return {
+      id: 20 + number,
       role: 'doctor',
       email: `doctor${String(number).padStart(3, '0')}@benchmark.invalid`,
       doctorId: number,
@@ -55,6 +57,7 @@ export function userForVu(vuId, forcedRole = null) {
   if (forcedRole === 'reception') {
     const number = ((vuId - 1) % 100) + 1
     return {
+      id: 170 + number,
       role: 'reception',
       email: `reception${String(number).padStart(3, '0')}@benchmark.invalid`,
       doctorId: null,
@@ -65,6 +68,7 @@ export function userForVu(vuId, forcedRole = null) {
   if (bucket === 0) {
     const number = (Math.floor((vuId - 1) / 10) % 20) + 1
     return {
+      id: number,
       role: 'admin',
       email: `admin${String(number).padStart(3, '0')}@benchmark.invalid`,
       doctorId: null,
@@ -73,6 +77,7 @@ export function userForVu(vuId, forcedRole = null) {
   if (bucket < 5) {
     const number = (((vuId - 1) * 7) % 150) + 1
     return {
+      id: 20 + number,
       role: 'doctor',
       email: `doctor${String(number).padStart(3, '0')}@benchmark.invalid`,
       doctorId: number,
@@ -80,6 +85,7 @@ export function userForVu(vuId, forcedRole = null) {
   }
   const number = (((vuId - 1) * 7) % 100) + 1
   return {
+    id: 170 + number,
     role: 'reception',
     email: `reception${String(number).padStart(3, '0')}@benchmark.invalid`,
     doctorId: null,

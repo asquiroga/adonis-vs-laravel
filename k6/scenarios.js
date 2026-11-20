@@ -34,7 +34,7 @@ function stressScenarios(rate, duration) {
       timeUnit: '1s',
       preAllocatedVUs: preAllocated[role],
       maxVUs: maximum[role],
-      env: { BENCH_ROLE: role },
+      env: { BENCH_ROLE: role, PREAUTHENTICATED: '1' },
       tags: { workload: 'stress_step', role },
     }
   }

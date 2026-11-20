@@ -6,6 +6,7 @@ Esta campaña compara el trabajo real de una aplicación clínica: autenticació
 
 - Un único esquema SQL y seed alimenta ambos ORMs. Hay 100.000 pacientes, 500.000 visitas, 200.000 turnos, 20 admins, 150 prestadores/médicos y 100 recepcionistas. Esto modela menos de 200 usuarios internos y hasta 150 prestadores que usan el producto.
 - Todos los usuarios comparten sólo en este benchmark la contraseña `BENCHMARK_PASSWORD`; el seed guarda bcrypt, nunca texto plano.
+- El seed también crea una sesión opaca determinista y exclusiva de benchmark por usuario, derivada de `BENCHMARK_PASSWORD`. Los escenarios de stress usan esas sesiones para que bcrypt y el arranque de VUs no contaminen la ventana medida; `login_burst` continúa usando el login real.
 - La mezcla de VUs es 10% admin, 40% médico y 50% recepción. Cada VU inicia sesión una vez y reutiliza cookie/CSRF; `login_burst` es la única excepción.
 - Los médicos tienen 666 o 667 pacientes primarios y una asignación secundaria distribuida entre cada décimo paciente. Los 403 esperados ocurren con 1% de las lecturas de médicos por defecto.
 - La selección reproducible usa `SEED`. El 80% de las selecciones cae en el 20% inicial de pacientes; 85% de páginas cae entre 1 y 3.
@@ -142,7 +143,7 @@ El informe muestra mediana y rango de throughput exitoso, p50/p95/p99, errores, 
 - `scripts/run-scenario.sh`: warm-up, latencia base, k6 y monitor de la Mac.
 - `scripts/monitor.sh`: monitor persistente del VPS, con `start`/`stop` recuperable tras cortar SSH.
 - `scripts/run-matrix.sh`: alternancia/restauración/orquestación.
-- `scripts/run-stress-ladder.sh`: escalera autenticada 20→200 req/s, dividida 10/40/50 por rol y con detención automática al primer escalón fallido.
+- `scripts/run-stress-ladder.sh`: escalera autenticada 20→200 req/s, dividida 10/40/50 por rol; registra todos los escalones aunque uno incumpla el SLO.
 - `scripts/evaluate-stress.mjs`: aplica el SLO de capacidad a cada escalón.
 - `scripts/stress-report.mjs`: tabla y límites de capacidad observados por backend/repetición.
 - `scripts/report.mjs`: mediana y rango.
@@ -154,7 +155,7 @@ Variables principales: `BASE_URL`, `BENCHMARK_PASSWORD`, `SCENARIO`, `RATE`, `DU
 
 La escalera formal ejecuta tasas independientes de 20, 40, 80, 120, 160 y 200 req/s. Antes de cada escalón restaura el baseline y recrea el backend; después hace 30 segundos de warm-up a la misma tasa y mide durante 3 minutos. La carga se divide en tres escenarios simultáneos: 10% admin, 40% médico/prestador y 50% recepción. La escritura es exactamente 10% por rol. La acción y los datos relativos se eligen con la semilla y el índice de iteración del rol; la identidad concreta del usuario se distribuye entre los VUs disponibles para representar múltiples sesiones concurrentes.
 
-Un escalón pasa solamente si completa al menos 99% de la tasa ofrecida, tiene errores menores a 0,5%, cero timeouts, menos de 1% de iteraciones descartadas, checks de al menos 99,5%, lecturas p95 menores a 500 ms y escrituras p95 menores a 800 ms. El orquestador detiene ese backend al primer fallo.
+Un escalón pasa solamente si completa al menos 99% de la tasa ofrecida, tiene errores menores a 0,5%, cero timeouts, menos de 1% de iteraciones descartadas, checks de al menos 99,5%, lecturas p95 menores a 500 ms y escrituras p95 menores a 800 ms. El orquestador continúa después de un fallo para evitar que una única cola larga o una muestra pequeña trunque la comparación. Cada endpoint tiene además su propio `Trend` en el resumen de k6.
 
 Desde la Mac, después de regenerar el baseline y reconstruir ambos backends en el VPS:
 

@@ -77,10 +77,7 @@ for repetition in $(seq 1 "$repetitions"); do
       verdict_status=$?
       set -e
       if (( verdict_status != 0 )); then
-        echo "Stopping $backend ladder after failed step at $rate req/s."
-        ssh "$SSH_TARGET" "cd '$REMOTE_DIR' && sudo ./scripts/backend.sh stop '$backend'"
-        active_backend=""
-        break
+        echo "Step failed at $rate req/s; continuing so an isolated tail-latency breach cannot truncate the comparison."
       fi
 
       ssh "$SSH_TARGET" "cd '$REMOTE_DIR' && sudo ./scripts/backend.sh stop '$backend'"

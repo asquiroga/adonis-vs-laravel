@@ -2,7 +2,7 @@ import http from 'k6/http'
 import { check, sleep } from 'k6'
 import exec from 'k6/execution'
 import { config, options as configuredOptions } from './config.js'
-import { currentUser, login, writeParams } from './lib/auth.js'
+import { currentUser, login, readParams, writeParams } from './lib/auth.js'
 import { expectedForbidden, record } from './lib/metrics.js'
 import { integer, isoAt, page, patientId, rng, visitId } from './lib/data.js'
 
@@ -16,8 +16,9 @@ function randomForIteration() {
 
 function get(path, endpoint, role, expected = 200) {
   const tags = { endpoint, role }
+  const params = readParams(tags)
   const response = http.get(`${config.baseUrl}${path}`, {
-    tags,
+    ...params,
     responseCallback: http.expectedStatuses(expected),
   })
   const ok = record(response, expected, tags, 'read')

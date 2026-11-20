@@ -29,6 +29,13 @@ const readP95 = metric('read_duration', 'p(95)', Number.POSITIVE_INFINITY)
 const writeP95 = metric('write_duration', 'p(95)', Number.POSITIVE_INFINITY)
 const completionRatio = iterations / expectedIterations
 const droppedRatio = dropped / Math.max(1, iterations + dropped)
+const endpointP95 = Object.fromEntries(
+  Object.entries(data.metrics || {})
+    .filter(([name]) => name.startsWith('endpoint_') && name.endsWith('_duration'))
+    .map(([name, entry]) => [name.replace(/^endpoint_/, '').replace(/_duration$/, '').replaceAll('_', '.'), entry.values?.['p(95)'] ?? entry['p(95)']])
+    .filter(([, value]) => Number.isFinite(value)),
+)
+const worstEndpoint = Object.entries(endpointP95).sort((a, b) => b[1] - a[1])[0] || [null, null]
 
 const criteria = {
   completion_ratio_at_least_99_percent: completionRatio >= 0.99,
@@ -58,6 +65,9 @@ const verdict = {
   http_p99_ms: metric('http_req_duration', 'p(99)'),
   read_p95_ms: readP95,
   write_p95_ms: writeP95,
+  endpoint_p95_ms: endpointP95,
+  worst_endpoint: worstEndpoint[0],
+  worst_endpoint_p95_ms: worstEndpoint[1],
   criteria,
 }
 
